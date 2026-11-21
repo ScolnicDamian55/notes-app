@@ -20,18 +20,22 @@ import { DbService } from './db.service';
 export class NotesController {
   constructor(private db: DbService) {}
 
-  // Notițele mele, cu căutare după titlu
+  // Notițele mele, cu căutare după conținut
   @Get()
   async list(@Req() req, @Query('search') search = '') {
+    if (typeof search !== 'string' || search.length > 20) {
+      throw new BadRequestException('Textul căutat poate avea cel mult 20 de caractere');
+    }
     try {
       const result = await this.db.query(
         `SELECT id, title, content, is_public, created_at FROM notes
-         WHERE user_id = ${req.user.sub} AND title ILIKE '%${search}%'
+         WHERE user_id = $1 AND content ILIKE $2
          ORDER BY id DESC`,
+        [req.user.sub, `%${search}%`],
       );
       return result.rows;
-    } catch (err) {
-      throw new BadRequestException(err.message);
+    } catch {
+      throw new BadRequestException('Căutarea nu a putut fi efectuată');
     }
   }
 
